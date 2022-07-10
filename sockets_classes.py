@@ -25,9 +25,6 @@ ServerEinstellungen = {
     "CLIENT_PORT": 16000,
 }
 
-
-
-
 class MultiCastSocket(threading.Thread):
 
     def __init__(self, process_id):
@@ -79,21 +76,6 @@ class UdpSocket(threading.Thread):
                     self.queue.put(message_input(data.decode("utf-8"), str(addr[0])), block=False)
         except Exception as e:
             print(e)
-
-
-class ServerSockets:
-
-    def __init__(self):
-        # -------------------
-        # BROADCAST
-        self.BROADCAST_PORT = ServerEinstellungen["BROADCAST_PORT"]
-        self.UDP_PORT = ServerEinstellungen["UDP_SOCKET_PORT"]
-        # Bind socket to address and port
-        self.broadcast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # Set the socket to broadcast and enable reusing addresses
-        self.broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self.broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.broadcast_socket.bind((localip, self.BROADCAST_PORT))
 
 
 def message_input(string, sender_ip):

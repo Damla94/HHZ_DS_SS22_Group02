@@ -8,27 +8,20 @@ import select
 from client_udp_socket import ClientUDPSocket, ClientMultiCast
 import socket
 
-
 localhost = socket.gethostname()
 localip = socket.gethostbyname(localhost)
-
 
 def outgoing_frame_creater(frame_list):
     frame = ";".join(frame_list)
     return frame
 
-# for
 # https://repolinux.wordpress.com/2012/10/09/non-blocking-read-from-stdin-in-python/
-
-
 
 Client_Einstellungen = {
     "CHAT_MCGROUP": "229.229.229.229",
     "CHAT_MCGROUPPORT": 15000,
     "UDP_SOCKET_PORT": 12222,
 }
-
-
 
 class ChatPartpicant(threading.Thread):
 
@@ -45,8 +38,8 @@ class ChatPartpicant(threading.Thread):
         self.client_multicast_socket = ClientMultiCast(self.username)
         #self.worker_thread = WorkerClass(self.username, self.incomings_pipe, self.outgoings_pipe, self.primaryIP)
 
-        self.ackedChatMessage = []
-        self.unackedChatMessage = []
+        self.ackedChatMessage = [] # liste der bestätigten nachrichten
+        self.unackedChatMessage = [] # liste der NICHT bestätigten nachrichten
 
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -59,11 +52,9 @@ class ChatPartpicant(threading.Thread):
         self.client_udp_socket.start()
         self.client_multicast_socket.start()
 
-
         try:
             while True:
-                # If there's input ready, do something, else do something
-                # else. Note timeout is zero so select won't block at all.
+                # wenn input bereit, dann mache etwas, sonst mache was anderes (else)
                 while sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
                     line = sys.stdin.readline()
                     if line:
@@ -77,24 +68,23 @@ class ChatPartpicant(threading.Thread):
                         if data_list[0]  == "ACK" and data_list[1] == "SERVER" and data_list[6] == "I AM THE PRIMARY SERVER":
                             self.primaryIP = data_list[7]
                     if not self.client_multicast_socket.queue.empty():
-                        data_list = self.client_multicast_socket.queue.get()
-                        if data_list[0] == "CHATMESSAGE" and data_list[1] == "SERVER":
-                            statement = data_list[6].split(":")
-                            if data_list[3] not in self.ackedChatMessage:
+                        data_list = self.client_multicast_socket.queue.get() # nehme eine datenliste aus der warteschlange (queue)
+                        if data_list[0] == "CHATMESSAGE" and data_list[1] == "SERVER": # wenn chatmessage und von server
+                            statement = data_list[6].split(":") #username position 0 und nachricht position 1
+                            if data_list[3] not in self.ackedChatMessage: # wenn nachricht nicht in der bestätigten ist
                                 self.printMessage(statement[1], statement[0])
-                            self.ackedChatMessage.append(data_list[3])
-
-
-                            if len(self.unackedChatMessage) > 0:
+                            self.ackedChatMessage.append(data_list[3]) # aufnahme der nachricht in die liste der bestätigten
+                            if len(self.unackedChatMessage) > 0: #
                                 for item in range(0, len(self.unackedChatMessage)):
                                     if self.unackedChatMessage[item][2] == data_list[3]:
                                         del self.unackedChatMessage[item]
-                                        break
+                                        break # beenden der schleife da nachricht nur einmal vorhanden ist
                     self.DynamicDiscoveryMessageGenerieren()
                     self.KontrolleUnbestaetigteUndSendeNeu()
         except Exception as e:
             print(e)
 
+    # unacked nachrichten (nicht erfolgreich zugestellte nachrichten) werden in 10 sekunden intervallen wieder versendet
     def KontrolleUnbestaetigteUndSendeNeu(self):
         if (float(time.time() - float(self.resendTimer))) > 10:
             if len(self.unackedChatMessage) > 0:
